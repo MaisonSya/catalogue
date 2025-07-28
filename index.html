@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sya Catalogue</title>
+  <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/MaisonSya/catalogue/refs/heads/main/img/favsya.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header-flex">
+      <img src="https://raw.githubusercontent.com/MaisonSya/catalogue/refs/heads/main/img/logo%20sya%20noir%20(1).png" alt="Logo" class="logo-site">
+      <h1>Catalogue</h1>
+    </div>
+    <div class="controls">
+      <div class="filtres">
+        <label for="filtre-nom">Nom :</label>
+        <input type="text" id="filtre-nom" placeholder="Rechercher...">
+        <label for="prix-min">Prix min :</label>
+        <input type="number" id="prix-min" min="0" placeholder="Min" style="width:70px;">
+        <label for="prix-max">Prix max :</label>
+        <input type="number" id="prix-max" min="0" placeholder="Max" style="width:70px;">
+        <label for="filtre-categorie">Catégorie :</label>
+        <select id="filtre-categorie">
+          <option value="">Toutes</option>
+          <option value="Bracelet">Bracelet</option>
+          <option value="Collier">Collier</option>
+          <option value="Boucles d'oreilles">Boucles d'oreilles</option>
+        </select>
+      </div>
+      <div class="tri-container">
+        <label for="tri">Trier par :</label>
+        <select id="tri">
+          <option value="prix-asc">Prix croissant</option>
+          <option value="prix-desc">Prix décroissant</option>
+          <option value="nom-asc">Nom (A-Z)</option>
+          <option value="nom-desc">Nom (Z-A)</option>
+        </select>
+      </div>
+    </div>
+    <div class="catalogue" id="catalogue"></div>
+  </div>
+  <script src="bijoux.js"></script>
+  <script>
+    // La variable 'bijoux' est maintenant importée depuis bijoux.js
+    let triCourant = 'prix-asc';
+    let filtreNom = '';
+    let prixMin = '';
+    let prixMax = '';
+    let filtreCategorie = '';
+
+    function appliquerFiltresEtTri() {
+      let bijouxAffiches = bijoux.filter(bijou => {
+        const nomOk = bijou.nom.toLowerCase().includes(filtreNom.toLowerCase());
+        const prix = parseFloat(bijou.prix);
+        const minOk = prixMin === '' || prix >= parseFloat(prixMin);
+        const maxOk = prixMax === '' || prix <= parseFloat(prixMax);
+        const catOk = !filtreCategorie || bijou.categorie === filtreCategorie;
+        return nomOk && minOk && maxOk && catOk;
+      });
+      switch(triCourant) {
+        case 'prix-asc':
+          bijouxAffiches.sort((a, b) => parseFloat(a.prix) - parseFloat(b.prix));
+          break;
+        case 'prix-desc':
+          bijouxAffiches.sort((a, b) => parseFloat(b.prix) - parseFloat(a.prix));
+          break;
+        case 'nom-asc':
+          bijouxAffiches.sort((a, b) => a.nom.localeCompare(b.nom, 'fr', {sensitivity: 'base'}));
+          break;
+        case 'nom-desc':
+          bijouxAffiches.sort((a, b) => b.nom.localeCompare(a.nom, 'fr', {sensitivity: 'base'}));
+          break;
+      }
+      renderCatalogue(bijouxAffiches);
+    }
+
+    function renderCatalogue(bijouxAffiches) {
+      const catalogue = document.getElementById('catalogue');
+      catalogue.innerHTML = '';
+      if (bijouxAffiches.length === 0) {
+        catalogue.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">Aucun bijou dans le catalogue.</p>';
+        return;
+      }
+      bijouxAffiches.forEach((bijou, bijouIdx) => {
+        const div = document.createElement('div');
+        div.className = 'bijou';
+        // Galerie d'images
+        let galerie = '';
+        if (bijou.images && bijou.images.length > 0) {
+          galerie += `<img class="image-principale" id="image-principale-${bijouIdx}" src="${bijou.images[0]}" alt="${bijou.nom}">`;
+          if (bijou.images.length > 1) {
+            galerie += '<div class="miniatures">';
+            bijou.images.forEach((img, imgIdx) => {
+              galerie += `<img class="miniature${imgIdx === 0 ? ' active' : ''}" src="${img}" alt="miniature" data-bijou="${bijouIdx}" data-img="${imgIdx}">`;
+            });
+            galerie += '</div>';
+          }
+        }
+        // Générer dynamiquement le lien WhatsApp avec message prérempli
+        const numeroWhatsApp = '21620333128';
+        const messageWhatsApp = `Bonjour, je souhaite acheter ${bijou.nom} (${bijou.categorie}) à ${parseFloat(bijou.prix).toFixed(2)} DT`;
+        const lienWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(messageWhatsApp)}`;
+        let badge = '';
+        if (bijou.promo && !isNaN(bijou.promo)) {
+          badge = '<span class="badge-status promo">Promo</span>';
+        } else if (bijou.status === 'outofstock') {
+          badge = '<span class="badge-status outofstock">Rupture</span>';
+        } else if (bijou.status === 'new') {
+          badge = '<span class="badge-status new">Nouveau</span>';
+        }
+        let prixHtml = '';
+        if (bijou.promo && !isNaN(bijou.promo)) {
+          prixHtml = `<span class='prix-barree'>${parseFloat(bijou.prix).toFixed(2)} DT</span> <span class='prix-promo'>${parseFloat(bijou.promo).toFixed(2)} DT</span>`;
+        } else {
+          prixHtml = `<span class='prix'>${parseFloat(bijou.prix).toFixed(2)} DT</span>`;
+        }
+        div.innerHTML = `
+          ${badge}
+          ${galerie}
+          <h3>${bijou.nom}</h3>
+          <div class="prix">${prixHtml}</div>
+        `;
+        catalogue.appendChild(div);
+      });
+      // Ajout des listeners pour les miniatures
+      document.querySelectorAll('.miniature').forEach(miniature => {
+        miniature.addEventListener('click', function() {
+          const bijouIdx = this.getAttribute('data-bijou');
+          const imgIdx = this.getAttribute('data-img');
+          const principale = document.getElementById(`image-principale-${bijouIdx}`);
+          const bijou = bijouxAffiches[bijouIdx];
+          if (principale && bijou && bijou.images[imgIdx]) {
+            principale.src = bijou.images[imgIdx];
+            // Mettre à jour l'état actif
+            this.parentNode.querySelectorAll('.miniature').forEach(m => m.classList.remove('active'));
+            this.classList.add('active');
+          }
+        });
+      });
+    }
+
+    document.getElementById('tri').addEventListener('change', function(e) {
+      triCourant = e.target.value;
+      appliquerFiltresEtTri();
+    });
+    document.getElementById('filtre-nom').addEventListener('input', function(e) {
+      filtreNom = e.target.value;
+      appliquerFiltresEtTri();
+    });
+    document.getElementById('prix-min').addEventListener('input', function(e) {
+      prixMin = e.target.value;
+      appliquerFiltresEtTri();
+    });
+    document.getElementById('prix-max').addEventListener('input', function(e) {
+      prixMax = e.target.value;
+      appliquerFiltresEtTri();
+    });
+    document.getElementById('filtre-categorie').addEventListener('change', function(e) {
+      filtreCategorie = e.target.value;
+      appliquerFiltresEtTri();
+    });
+
+    // Affichage initial
+    appliquerFiltresEtTri();
+  </script>
+</body>
+</html> 
